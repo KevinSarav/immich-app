@@ -3,6 +3,9 @@
 This setup keeps secrets out of git and deploys to your server over SSH.
 On each push to `main`, GitHub Actions tells your server to `git pull` (via fetch/reset) and then run Docker Compose.
 
+Important: Codespaces user secrets are not used by GitHub Actions workflows.
+You must store deployment secrets under Actions secrets (repository or environment secrets).
+
 ## 1) Initialize git and push to GitHub
 
 ```bash
@@ -35,6 +38,23 @@ Use either repo secrets or environment secrets (recommended: environment `produc
 - `IMMICH_ENV_FILE`: full multiline content of your production `.env`
 
 `IMMICH_ENV_FILE` should be the exact text of your `.env` file.
+
+### Keep IMMICH_ENV_FILE synced from local .env
+
+Use the helper script:
+
+```bash
+chmod +x scripts/sync-immich-env-secret.sh
+./scripts/sync-immich-env-secret.sh
+```
+
+This updates Actions environment secret `IMMICH_ENV_FILE` in environment `production`.
+
+Optional arguments:
+
+```bash
+./scripts/sync-immich-env-secret.sh <environment-name> <secret-name> <env-file-path>
+```
 
 ## 4) One-time server bootstrap
 
@@ -73,6 +93,11 @@ Also make sure the cloned repo in `DEPLOY_PATH` can pull from GitHub non-interac
 	- `git reset --hard origin/main`
 	- `docker compose pull && docker compose up -d --remove-orphans`
 - Manual run (`workflow_dispatch`) has option `sync_env=true` to overwrite remote `.env` from `IMMICH_ENV_FILE` secret.
+
+Recommended flow when you change `.env` locally:
+- Run `./scripts/sync-immich-env-secret.sh`
+- Run Actions workflow manually with `sync_env=true`
+- Then continue normal push-to-main deploys
 
 Recommended routine:
 - Day-to-day: push to `main`; server auto-pulls and deploys
