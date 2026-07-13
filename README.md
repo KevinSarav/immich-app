@@ -8,12 +8,15 @@
   <br/>
 </p>
 
+<p align="center">
+<img src="design/immich-logo-stacked-light.svg" width="300" title="Login With Custom URL">
+</p>
 <h3 align="center">High performance self-hosted photo and video management solution</h3>
 <br/>
 <br/>
  
 
-<h3 align="center">Automatically deployed to my Ubuntu Server with Docker Compose via GitHub Actions whenever changes are pushed to main</h3>
+<h3 align="left">Automatically deployed to my Ubuntu Server with Docker Compose via GitHub Actions whenever changes are pushed to main</h3>
 <br/>
 <br/>
 
