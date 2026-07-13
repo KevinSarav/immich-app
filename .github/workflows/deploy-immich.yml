@@ -57,6 +57,33 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -p "$DEPLOY_PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
 
+      - name: Backup existing remote .env (keep last 10)
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" bash -s -- "$DEPLOY_PATH" <<'EOF'
+          set -euo pipefail
+          deploy_path="$1"
+          backup_env_dir="$deploy_path/env_backups"
+
+          mkdir -p "$backup_env_dir"
+
+          if [[ -f "$deploy_path/.env" ]]; then
+            timestamp="$(date +%Y%m%d-%H%M%S)"
+            cp "$deploy_path/.env" "$backup_env_dir/.env.local.backup.$timestamp"
+
+            mapfile -t old_backups < <(
+              find "$backup_env_dir" -maxdepth 1 -type f -name '.env.local.backup.*' -printf '%T@ %p\n' \
+                | sort -nr \
+                | awk 'NR>10 {print $2}'
+            )
+
+            if (( ${#old_backups[@]} > 0 )); then
+              rm -f "${old_backups[@]}"
+            fi
+          fi
+          EOF
+
       - name: Sync .env from secret
         shell: bash
         env:
