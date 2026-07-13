@@ -1,0 +1,62 @@
+name: Deploy Immich
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      sync_env:
+        description: "Replace remote .env from secret IMMICH_ENV_FILE"
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to server
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        shell: bash
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${{ secrets.DEPLOY_PORT }}" -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Sync .env from secret (optional)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.sync_env }}
+        shell: bash
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          IMMICH_ENV_FILE: ${{ secrets.IMMICH_ENV_FILE }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$IMMICH_ENV_FILE" > .env.deploy
+          scp -P "$DEPLOY_PORT" .env.deploy "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/.env"
+          rm -f .env.deploy
+
+      - name: Pull latest main and deploy on server
+        shell: bash
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "DEPLOY_PATH='$DEPLOY_PATH' DEPLOY_BRANCH='$DEPLOY_BRANCH' '$DEPLOY_PATH/scripts/deploy-remote.sh'"
