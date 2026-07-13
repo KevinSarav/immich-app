@@ -16,7 +16,7 @@
 <br/>
  
 
-<h2 align="left">Automatically deployed to my Ubuntu Server with Docker Compose via GitHub Actions whenever changes are pushed to main</h3>
+<h4 align="left">Automatically deployed to my Ubuntu Server with Docker Compose via GitHub Actions whenever changes are pushed to main</h3>
 <br/>
 <br/>
 
