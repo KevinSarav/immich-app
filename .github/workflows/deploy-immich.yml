@@ -5,12 +5,6 @@ on:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      sync_env:
-        description: "Replace remote .env from secret IMMICH_ENV_FILE"
-        type: boolean
-        required: false
-        default: false
 
 permissions:
   contents: read
@@ -63,8 +57,7 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -p "$DEPLOY_PORT" -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts
 
-      - name: Sync .env from secret (optional)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.sync_env }}
+      - name: Sync .env from secret
         shell: bash
         env:
           IMMICH_ENV_FILE: ${{ secrets.IMMICH_ENV_FILE }}
