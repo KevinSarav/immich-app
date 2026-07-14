@@ -1,4 +1,5 @@
 .env
 .env.*
 !.env.example
-env_backups/
+!.env.sops
+!.env.*.sops
