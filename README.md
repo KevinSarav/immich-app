@@ -23,3 +23,20 @@
 > [!NOTE]
 > You can find the main documentation, including installation guides, at https://immich.app/.
 
+## Docker Deploy
+
+1. Copy `.env.example` to `.env` and fill in production values.
+2. Review environment variable meanings in the official docs: https://docs.immich.app/install/environment-variables.
+3. Start or update the stack:
+
+```bash
+docker compose up -d
+```
+
+4. Pull latest images before updating (recommended):
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
