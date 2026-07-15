@@ -53,7 +53,7 @@ jobs:
             "/user/packages/container/immich-machine-learning-mirror" \
             --field visibility=public
 
-      - name: Prune old immich-server versions (keep newest 3)
+      - name: Prune old immich-server versions (keep newest 5)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -68,16 +68,16 @@ jobs:
           total=${#version_ids[@]}
           echo "Total versions found: $total"
 
-          if (( total <= 3 )); then
-            echo "3 or fewer versions present — nothing to prune."
+          if (( total <= 5 )); then
+            echo "5 or fewer versions present — nothing to prune."
           else
-            for (( i=3; i<total; i++ )); do
+            for (( i=5; i<total; i++ )); do
               vid="${version_ids[$i]}"
               echo "Deleting old version ID: $vid"
               gh api --method DELETE \
                 "/user/packages/container/${PACKAGE}/versions/${vid}"
             done
-            echo "Pruning complete. Kept 3 most recent versions."
+            echo "Pruning complete. Kept 5 most recent versions."
           fi
 
       - name: Prune old immich-machine-learning versions (keep newest 3)
@@ -95,14 +95,14 @@ jobs:
           total=${#version_ids[@]}
           echo "Total versions found: $total"
 
-          if (( total <= 3 )); then
-            echo "3 or fewer versions present — nothing to prune."
+          if (( total <= 5 )); then
+            echo "5 or fewer versions present — nothing to prune."
           else
-            for (( i=3; i<total; i++ )); do
+            for (( i=5; i<total; i++ )); do
               vid="${version_ids[$i]}"
               echo "Deleting old version ID: $vid"
               gh api --method DELETE \
                 "/user/packages/container/${PACKAGE}/versions/${vid}"
             done
-            echo "Pruning complete. Kept 3 most recent versions."
+            echo "Pruning complete. Kept 5 most recent versions."
           fi
