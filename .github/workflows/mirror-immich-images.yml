@@ -1,0 +1,108 @@
+name: Mirror Immich Images
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 3 1,15 * *" # 03:00 UTC on the 1st and 15th of every month
+
+permissions:
+  packages: write
+
+jobs:
+  mirror:
+    name: Copy and prune
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set image tag and lowercase owner
+        id: meta
+        run: |
+          echo "tag=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+          echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install skopeo
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq skopeo
+
+      - name: Copy immich-server
+        run: |
+          skopeo copy --all \
+            docker://ghcr.io/immich-app/immich-server:release \
+            docker://ghcr.io/${{ steps.meta.outputs.owner }}/immich-server-mirror:${{ steps.meta.outputs.tag }}
+
+      - name: Copy immich-machine-learning
+        run: |
+          skopeo copy --all \
+            docker://ghcr.io/immich-app/immich-machine-learning:release \
+            docker://ghcr.io/${{ steps.meta.outputs.owner }}/immich-machine-learning-mirror:${{ steps.meta.outputs.tag }}
+
+      - name: Set package visibility to public
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method PATCH \
+            "/user/packages/container/immich-server-mirror" \
+            --field visibility=public
+          gh api --method PATCH \
+            "/user/packages/container/immich-machine-learning-mirror" \
+            --field visibility=public
+
+      - name: Prune old immich-server versions (keep newest 3)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          PACKAGE="immich-server-mirror"
+
+          mapfile -t version_ids < <(gh api \
+            "/user/packages/container/${PACKAGE}/versions" \
+            --paginate \
+            --jq 'sort_by(.created_at) | reverse | .[].id')
+
+          total=${#version_ids[@]}
+          echo "Total versions found: $total"
+
+          if (( total <= 3 )); then
+            echo "3 or fewer versions present — nothing to prune."
+          else
+            for (( i=3; i<total; i++ )); do
+              vid="${version_ids[$i]}"
+              echo "Deleting old version ID: $vid"
+              gh api --method DELETE \
+                "/user/packages/container/${PACKAGE}/versions/${vid}"
+            done
+            echo "Pruning complete. Kept 3 most recent versions."
+          fi
+
+      - name: Prune old immich-machine-learning versions (keep newest 3)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          PACKAGE="immich-machine-learning-mirror"
+
+          mapfile -t version_ids < <(gh api \
+            "/user/packages/container/${PACKAGE}/versions" \
+            --paginate \
+            --jq 'sort_by(.created_at) | reverse | .[].id')
+
+          total=${#version_ids[@]}
+          echo "Total versions found: $total"
+
+          if (( total <= 3 )); then
+            echo "3 or fewer versions present — nothing to prune."
+          else
+            for (( i=3; i<total; i++ )); do
+              vid="${version_ids[$i]}"
+              echo "Deleting old version ID: $vid"
+              gh api --method DELETE \
+                "/user/packages/container/${PACKAGE}/versions/${vid}"
+            done
+            echo "Pruning complete. Kept 3 most recent versions."
+          fi
