@@ -3,3 +3,4 @@
 !.env.example
 !.env.sops
 !.env.*.sops
+.githooks/
