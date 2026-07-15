@@ -5,6 +5,17 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      server_image:
+        description: "Override immich-server image for rollback (e.g. ghcr.io/kevinsarav/immich-server-mirror:2026-07-01). Leave blank to pull upstream latest."
+        required: false
+        default: ""
+      ml_image:
+        description: "Override immich-machine-learning image for rollback (e.g. ghcr.io/kevinsarav/immich-machine-learning-mirror:2026-07-01). Leave blank to pull upstream latest."
+        required: false
+        default: ""
+  schedule:
+    - cron: "0 11 * * 0" # Weekly, Sunday 05:00 CST (UTC-6)
 
 permissions:
   contents: read
@@ -61,6 +72,26 @@ jobs:
         shell: bash
         env:
           DEPLOY_BRANCH: ${{ github.ref_name }}
+          SERVER_IMAGE_OVERRIDE: ${{ inputs.server_image }}
+          ML_IMAGE_OVERRIDE: ${{ inputs.ml_image }}
         run: |
           set -euo pipefail
-          ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" "DEPLOY_PATH='$DEPLOY_PATH' DEPLOY_BRANCH='$DEPLOY_BRANCH' bash '$DEPLOY_PATH/scripts/deploy-remote.sh'"
+          ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "DEPLOY_PATH='$DEPLOY_PATH' DEPLOY_BRANCH='$DEPLOY_BRANCH' SERVER_IMAGE_OVERRIDE='$SERVER_IMAGE_OVERRIDE' ML_IMAGE_OVERRIDE='$ML_IMAGE_OVERRIDE' bash '$DEPLOY_PATH/scripts/deploy-remote.sh'"
+
+      - name: Verify Immich is healthy
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Polling Immich health endpoint (up to 2 minutes)..."
+          for i in {1..12}; do
+            if ssh -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+              "curl -sf http://localhost:2283/api/server/ping 2>/dev/null | grep -q 'pong'"; then
+              echo "Immich is healthy."
+              exit 0
+            fi
+            echo "Attempt $i/12 — not yet healthy, retrying in 10s..."
+            sleep 10
+          done
+          echo "::error title=Health check failed::Immich did not become healthy within 2 minutes after deploy."
+          exit 1

@@ -46,7 +46,19 @@ fi
 
 # Pull latest images and recreate containers in place.
 docker compose --env-file .env pull
-
+# If mirror image overrides were requested, retag them so compose uses them in place of upstream.
+if [[ -n "${SERVER_IMAGE_OVERRIDE:-}" ]]; then
+  echo "Server image override requested: pulling $SERVER_IMAGE_OVERRIDE"
+  docker pull "$SERVER_IMAGE_OVERRIDE"
+  docker tag "$SERVER_IMAGE_OVERRIDE" ghcr.io/immich-app/immich-server:release
+  echo "Retagged as ghcr.io/immich-app/immich-server:release"
+fi
+if [[ -n "${ML_IMAGE_OVERRIDE:-}" ]]; then
+  echo "ML image override requested: pulling $ML_IMAGE_OVERRIDE"
+  docker pull "$ML_IMAGE_OVERRIDE"
+  docker tag "$ML_IMAGE_OVERRIDE" ghcr.io/immich-app/immich-machine-learning:release
+  echo "Retagged as ghcr.io/immich-app/immich-machine-learning:release"
+fi
 docker compose --env-file .env up -d --remove-orphans
 
 docker image prune -f >/dev/null 2>&1 || true
