@@ -59,6 +59,18 @@ if [[ -n "${ML_IMAGE_OVERRIDE:-}" ]]; then
   docker tag "$ML_IMAGE_OVERRIDE" ghcr.io/immich-app/immich-machine-learning:release
   echo "Retagged as ghcr.io/immich-app/immich-machine-learning:release"
 fi
+if [[ -n "${PGSQL_IMAGE_OVERRIDE:-}" ]]; then
+  echo "Postgres image override requested: pulling $PGSQL_IMAGE_OVERRIDE"
+  docker pull "$PGSQL_IMAGE_OVERRIDE"
+  # Extract current postgres image from compose file to get the target tag
+  current_pgsql_image=$(grep -A 1 "container_name: immich_postgres" docker-compose.yml | grep "image:" | sed 's/.*image: //;s/[[:space:]]*$//')
+  if [[ -n "$current_pgsql_image" ]]; then
+    docker tag "$PGSQL_IMAGE_OVERRIDE" "$current_pgsql_image"
+    echo "Retagged as $current_pgsql_image"
+  else
+    echo "WARNING: Could not extract current postgres image from docker-compose.yml"
+  fi
+fi
 docker compose --env-file .env up -d --remove-orphans
 
 docker image prune -f >/dev/null 2>&1 || true
