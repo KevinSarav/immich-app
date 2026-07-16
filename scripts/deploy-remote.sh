@@ -46,7 +46,6 @@ fi
 
 # Pull latest images and recreate containers in place.
 docker compose --env-file .env pull
-# If mirror image overrides were requested, retag them so compose uses them in place of upstream.
 if [[ -n "${SERVER_IMAGE_OVERRIDE:-}" ]]; then
   echo "Server image override requested: pulling $SERVER_IMAGE_OVERRIDE"
   docker pull "$SERVER_IMAGE_OVERRIDE"
